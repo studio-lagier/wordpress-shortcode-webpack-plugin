@@ -1,0 +1,44 @@
+{
+  "name": "wordpress-shortcode-webpack-plugin",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:lagier-and-lagier/wordpress-shortcode-webpack-plugin.git",
+  "author": "Tom Lagier <tom@gliffy.com>",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf ./build/*"
+  },
+  "devDependencies": {
+    "@ava/typescript": "^2.0.0",
+    "@types/uuid": "^8.3.0",
+    "@types/webpack-manifest-plugin": "^3.0.4",
+    "ava": "^3.15.0",
+    "del": "^6.0.0",
+    "eslint": "^7.24.0",
+    "eslint-config-standard": "^16.0.2",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.3.1",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.4",
+    "webpack": "^5.33.2",
+    "webpack-merge": "^5.7.3"
+  },
+  "dependencies": {
+    "uuid": "^8.3.2",
+    "webpack-manifest-plugin": "^3.1.1"
+  },
+  "ava": {
+    "typescript": {
+      "rewritePaths": {
+        "src/": "build/src/",
+        "test/": "build/test/"
+      },
+      "compile": "tsc"
+    },
+    "ignoredByWatcher": [
+      "build/test/output/**/*"
+    ]
+  }
+}
