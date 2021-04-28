@@ -1,4 +1,5 @@
 import {
+  indentText,
   jsObjectToPhpArray,
   kebabToSnake,
   kebabToTitle,
@@ -105,12 +106,55 @@ export function createAssetManifest(manifest: Manifest) {
 }
 
 export function createAddAction(pluginName: string) {
-  return ` add_action('init', 'register_${kebabToSnake(
+  return `  add_action('init', 'register_${kebabToSnake(
     pluginName
   )}_entries');`;
 }
 
+export function createShortcodeDefinitions(
+  manifest: Manifest,
+  entryToRoot: { [entry: string]: string } = {}
+) {
+  const functions = [];
+
+  for (const entryName of Object.keys(manifest.entries)) {
+    const rootId = entryToRoot[entryName] || 'root';
+
+    // Write a function that creates the root element and enqueues the
+    // assets for that entrypoint.
+    const newFunc = `  function create_${entryName}_app() {
+    enqueue_assets('${entryName}');
+
+    return '<div id="${rootId}"></div>';
+  }`;
+
+    functions.push(newFunc);
+  }
+
+  return functions.join('\n');
+}
+
 export function createShortcodeRegistration(
+  shortcodePrefix: string,
   pluginName: string,
   manifest: Manifest
-) {}
+): string {
+  const addShortcodes = [];
+  const registerAssets = [];
+
+  for (const entryName of Object.keys(manifest.entries)) {
+    addShortcodes.push(
+      `add_shortcode('${shortcodePrefix}-${entryName}', 'create_${entryName}_app');`
+    );
+
+    registerAssets.push(`register_assets('${entryName}');`);
+  }
+  // Write a function that creates the root element and enqueues the
+  // assets for that entrypoint.
+  return `  function register_${kebabToSnake(
+    pluginName
+  )}_entries() {
+${indentText(addShortcodes.join('\n'), 2)}
+${indentText(registerAssets.join('\n'), 2)}
+  }`;
+}

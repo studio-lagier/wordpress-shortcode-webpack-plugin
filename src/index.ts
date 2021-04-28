@@ -11,6 +11,8 @@ import {
   PluginHeaderFields,
   createAssetManifest,
   createAddAction,
+  createShortcodeDefinitions,
+  createShortcodeRegistration,
 } from './template';
 
 interface PluginOptions {
@@ -23,6 +25,12 @@ interface PluginOptions {
   // Header fields for the Wordpress plugin.
   // See https://developer.wordpress.org/plugins/plugin-basics/header-requirements/#header-fields
   headerFields?: PluginHeaderFields;
+  // Map of entry point to root element ID.
+  // Each root element defaults to id "root", unless an
+  // alternate mapping is provided here.
+  entryToRoot?: {
+    [entry: string]: string;
+  };
 }
 
 export interface Manifest {
@@ -100,16 +108,32 @@ export class WordpressShortcodeWebpackPlugin {
 
           const templatedFile = pluginFileContent
             .replace(
-              '{{asset_manifest}}',
-              createAssetManifest(manifest)
-            )
-            .replace(
               '{{plugin_header}}',
               createPluginHeader({
                 ...this.options.headerFields,
                 pluginName: this.options
                   .wordpressPluginName,
               })
+            )
+            .replace(
+              '{{asset_manifest}}',
+              createAssetManifest(manifest)
+            )
+            .replace(
+              '{{shortcode_definitions}}',
+              createShortcodeDefinitions(
+                manifest,
+                this.options.entryToRoot
+              )
+            )
+            .replace(
+              '{{shortcode_registration}}',
+              createShortcodeRegistration(
+                this.options.shortcodePrefix ||
+                  this.options.wordpressPluginName,
+                this.options.wordpressPluginName,
+                manifest
+              )
             )
             .replace(
               '{{loading_script_utils}}',

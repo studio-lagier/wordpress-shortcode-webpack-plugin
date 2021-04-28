@@ -19,13 +19,13 @@ function is_css($path) {
 }
 
 function get_js_for_entrypoint($entrypoint) {
-  $assets = get_assets($entrypoint);
+  $assets = $manifest[$entrypoint];
   $js = array_filter($assets, "is_js");
   return $js;
 }
 
 function get_css_for_entrypoint($entrypoint) {
-  $assets = get_assets($entrypoint);
+  $assets = $manifest[$entrypoint];
   $css = array_filter($assets, "is_css");
   return $css;
 }
