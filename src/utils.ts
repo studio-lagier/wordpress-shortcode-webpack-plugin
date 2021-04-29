@@ -1,5 +1,7 @@
 // Needed for type info
 import fs from 'fs';
+import path from 'path';
+import yazl from 'yazl';
 
 export function readFile(
   _fs: any, // InputFileSystem from Webpack, not exported :(
@@ -119,4 +121,29 @@ export function getTabs(num: number) {
   return Array.from(new Array(num))
     .map((_) => `\t`)
     .join('');
+}
+
+export async function addDirectory(
+  zip: yazl.ZipFile,
+  realPath: string,
+  metadataPath: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    fs.readdir(realPath, async function (error, files) {
+      if (error == null) {
+        for (const file of files) {
+          await addDirectory(
+            zip,
+            path.join(realPath, file),
+            path.join(metadataPath, file)
+          );
+        }
+      } else if (error.code === 'ENOTDIR') {
+        zip.addFile(realPath, metadataPath);
+        return resolve();
+      } else {
+        return reject(error);
+      }
+    });
+  });
 }

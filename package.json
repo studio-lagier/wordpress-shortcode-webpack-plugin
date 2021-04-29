@@ -14,6 +14,7 @@
     "@ava/typescript": "^2.0.0",
     "@types/uuid": "^8.3.0",
     "@types/webpack-manifest-plugin": "^3.0.4",
+    "@types/yazl": "^2.4.2",
     "ava": "^3.15.0",
     "del": "^6.0.0",
     "eslint": "^7.24.0",
@@ -28,7 +29,8 @@
   },
   "dependencies": {
     "uuid": "^8.3.2",
-    "webpack-manifest-plugin": "^3.1.1"
+    "webpack-manifest-plugin": "^3.1.1",
+    "yazl": "^2.5.1"
   },
   "ava": {
     "typescript": {
