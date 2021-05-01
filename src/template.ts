@@ -5,7 +5,6 @@ import {
   kebabToTitle,
 } from './utils';
 import { Manifest } from './index';
-import { resolve } from 'path';
 
 export interface PluginHeaderFields {
   pluginUri?: string;
@@ -113,12 +112,12 @@ export function createAddAction(pluginName: string) {
 
 export function createShortcodeDefinitions(
   manifest: Manifest,
-  entryToRoot: { [entry: string]: string } = {}
+  entryToRootId: { [entry: string]: string } = {}
 ) {
   const functions = [];
 
   for (const entryName of Object.keys(manifest.entries)) {
-    const rootId = entryToRoot[entryName] || 'root';
+    const rootId = entryToRootId[entryName] || 'root';
 
     // Write a function that creates the root element and enqueues the
     // assets for that entrypoint.

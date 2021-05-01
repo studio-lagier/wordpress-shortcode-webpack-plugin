@@ -16,7 +16,7 @@ import {
 } from './template';
 import yazl from 'yazl';
 
-interface PluginOptions {
+export interface PluginOptions {
   // What to name the plugin.
   wordpressPluginName: string;
   // Prefix of the generated shortcodes. Defaults to `wordpressPluginName`.
@@ -29,7 +29,7 @@ interface PluginOptions {
   // Map of entry point to root element ID.
   // Each root element defaults to id "root", unless an
   // alternate mapping is provided here.
-  entryToRoot?: {
+  entryToRootId?: {
     [entry: string]: string;
   };
 }
@@ -44,13 +44,26 @@ export interface Manifest {
 type Entry = string[];
 
 export class WordpressShortcodeWebpackPlugin {
-  constructor(public options: PluginOptions) {}
+  constructor(public options: PluginOptions) {
+    if (!options.wordpressPluginName) {
+      throw new Error('wordpressPluginName is required');
+    }
+
+    const defaults = {
+      shortcodePrefix: options.wordpressPluginName,
+      pluginTemplate: resolve('./src/default-template.php'),
+      headerFields: {},
+      entryToRootId: {},
+    };
+
+    this.options = Object.assign({}, defaults, options);
+  }
 
   apply(compiler: Compiler) {
     const pluginName = WordpressShortcodeWebpackPlugin.name;
     const { webpack } = compiler;
-    // // const { Compilation } = webpack;
     const { RawSource } = webpack.sources;
+    const wpPluginName = this.options.wordpressPluginName;
 
     const dummyManifestFilename = v4();
 
@@ -59,7 +72,7 @@ export class WordpressShortcodeWebpackPlugin {
     new WebpackManifestPlugin({
       // We don't actually care about the file that gets written, we're going to make a unique name so we can delete it
       fileName: dummyManifestFilename,
-      basePath: `${this.options.wordpressPluginName}/assets`,
+      basePath: `${wpPluginName}/assets`,
       generate: (_, __, entries) => {
         const entrypointFiles: {
           [key: string]: Entry;
@@ -80,13 +93,7 @@ export class WordpressShortcodeWebpackPlugin {
       },
     }).apply(compiler);
 
-    // TODO: Read in from options
-    const outputPath = this.options.wordpressPluginName;
-
-    const outputFileName = join(
-      outputPath,
-      `${this.options.wordpressPluginName}.php`
-    );
+    const outputFileName = `${wpPluginName}/${wpPluginName}.php`;
 
     // Clean up our manifest after we're done with it
     compiler.hooks.thisCompilation.tap(
@@ -104,18 +111,14 @@ export class WordpressShortcodeWebpackPlugin {
         // -AND- because WebpackManifestPlugin registers for stage Infinity, we can't
         // register to a later processAssets stage to do something after it finishes.
         beforeEmit.tap(pluginName, (manifest: Manifest) => {
-          const inputPath = resolve(
-            './src/default-template.php'
-          );
-
           // Read in our template file
           const pluginFileContent = readFile(
             compiler.inputFileSystem,
-            inputPath
+            this.options.pluginTemplate!
           );
 
           const utilsPath = resolve(
-            './src/partials/load-assets.partial.php'
+            './src/load-assets.php'
           );
 
           const loadAssetsUtils = readFile(
@@ -128,8 +131,7 @@ export class WordpressShortcodeWebpackPlugin {
               '{{plugin_header}}',
               createPluginHeader({
                 ...this.options.headerFields,
-                pluginName: this.options
-                  .wordpressPluginName,
+                pluginName: wpPluginName,
               })
             )
             .replace(
@@ -140,15 +142,14 @@ export class WordpressShortcodeWebpackPlugin {
               '{{shortcode_definitions}}',
               createShortcodeDefinitions(
                 manifest,
-                this.options.entryToRoot
+                this.options.entryToRootId
               )
             )
             .replace(
               '{{shortcode_registration}}',
               createShortcodeRegistration(
-                this.options.shortcodePrefix ||
-                  this.options.wordpressPluginName,
-                this.options.wordpressPluginName,
+                this.options.shortcodePrefix!,
+                wpPluginName,
                 manifest
               )
             )
@@ -158,9 +159,7 @@ export class WordpressShortcodeWebpackPlugin {
             )
             .replace(
               '{{add_action}}',
-              createAddAction(
-                this.options.wordpressPluginName
-              )
+              createAddAction(wpPluginName)
             );
 
           compilation.emitAsset(
@@ -174,7 +173,7 @@ export class WordpressShortcodeWebpackPlugin {
           for (const chunk of compilation.chunks) {
             for (const file of chunk.files) {
               const dupedFileName = join(
-                outputPath,
+                wpPluginName,
                 'assets',
                 file
               );
@@ -216,17 +215,14 @@ export class WordpressShortcodeWebpackPlugin {
               assets
             )) {
               // Make sure no other assets got caught up in this run
-              if (!assetPath.startsWith(outputPath))
+              if (!assetPath.startsWith(wpPluginName))
                 continue;
 
               // OK we're dealing with something we want to zip
               archive.addBuffer(
                 asset.buffer(),
                 // TODO: Clean this up
-                assetPath.replace(
-                  this.options.wordpressPluginName + '/',
-                  ''
-                )
+                assetPath.replace(`${wpPluginName}/`, '')
               );
             }
 
