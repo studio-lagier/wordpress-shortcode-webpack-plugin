@@ -3,8 +3,69 @@ import {
   jsObjectToPhpArray,
   kebabToSnake,
   kebabToTitle,
+  readFile,
 } from './utils';
-import { Manifest } from './index';
+import { resolve } from 'path';
+import { Manifest, PluginOptions } from './index';
+import { Compilation, Compiler } from 'webpack';
+
+export function generatePluginFile(
+  wpPluginName: string,
+  manifest: Manifest,
+  options: PluginOptions,
+  compiler: Compiler
+) {
+  // Read in our template file
+  const pluginFileContent = readFile(
+    compiler.inputFileSystem,
+    options.pluginTemplate!
+  );
+
+  const utilsPath = resolve(__dirname, 'load-assets.php');
+
+  const loadAssetsUtils = readFile(
+    compiler.inputFileSystem,
+    utilsPath
+  );
+
+  const templatedFile = pluginFileContent
+    .replace(
+      '{{plugin_header}}',
+      createPluginHeader({
+        ...options.headerFields,
+        pluginName: wpPluginName,
+      })
+    )
+    .replace(
+      '{{asset_manifest}}',
+      createAssetManifest(manifest)
+    )
+    .replace(
+      '{{shortcode_definitions}}',
+      createShortcodeDefinitions(
+        manifest,
+        options.entryToRootId
+      )
+    )
+    .replace(
+      '{{shortcode_registration}}',
+      createShortcodeRegistration(
+        options.shortcodePrefix!,
+        wpPluginName,
+        manifest
+      )
+    )
+    .replace(
+      '{{loading_script_utils}}',
+      indentText(loadAssetsUtils, 1)
+    )
+    .replace(
+      '{{add_action}}',
+      createAddAction(wpPluginName)
+    );
+
+  return templatedFile;
+}
 
 export interface PluginHeaderFields {
   pluginUri?: string;

@@ -4,15 +4,11 @@ import {
   getCompilerHooks,
 } from 'webpack-manifest-plugin';
 import { v4 } from 'uuid';
-import { indentText, readFile } from './utils';
+
 import { resolve, join } from 'path';
 import {
-  createPluginHeader,
   PluginHeaderFields,
-  createAssetManifest,
-  createAddAction,
-  createShortcodeDefinitions,
-  createShortcodeRegistration,
+  generatePluginFile,
 } from './template';
 import yazl from 'yazl';
 
@@ -51,7 +47,10 @@ export class WordpressShortcodeWebpackPlugin {
 
     const defaults = {
       shortcodePrefix: options.wordpressPluginName,
-      pluginTemplate: resolve('./src/default-template.php'),
+      pluginTemplate: resolve(
+        __dirname,
+        'default-template.php'
+      ),
       headerFields: {},
       entryToRootId: {},
     };
@@ -64,38 +63,21 @@ export class WordpressShortcodeWebpackPlugin {
     const { webpack } = compiler;
     const { RawSource } = webpack.sources;
     const wpPluginName = this.options.wordpressPluginName;
-
     const dummyManifestFilename = v4();
 
-    // We're going to create a new instance of WebpackManifestPlugin that allows us to create
-    // a manifest to our spec
-    new WebpackManifestPlugin({
-      // We don't actually care about the file that gets written, we're going to make a unique name so we can delete it
-      fileName: dummyManifestFilename,
-      basePath: `${wpPluginName}/assets`,
-      generate: (_, __, entries) => {
-        const entrypointFiles: {
-          [key: string]: Entry;
-        } = {};
-        Object.keys(entries).forEach((entrypoint) => {
-          entrypointFiles[entrypoint] = entries[
-            entrypoint
-          ].filter(
-            (fileName) => !fileName.endsWith('.map')
-          );
-        });
+    // Create a custom manifest using WebpackManifestPlugin.
+    createManifestPlugin(
+      dummyManifestFilename,
+      wpPluginName,
+      compiler
+    );
 
-        return {
-          entries: entrypointFiles,
-          // Bit of a hack so we can clean this file up by ID later
-          id: dummyManifestFilename,
-        };
-      },
-    }).apply(compiler);
+    // Naming convention required by Wordpress
+    const outputFileName = join(
+      wpPluginName,
+      `${wpPluginName}.php`
+    );
 
-    const outputFileName = `${wpPluginName}/${wpPluginName}.php`;
-
-    // Clean up our manifest after we're done with it
     compiler.hooks.thisCompilation.tap(
       pluginName,
       (compilation) => {
@@ -103,75 +85,34 @@ export class WordpressShortcodeWebpackPlugin {
           compiler
         );
 
-        // This is kinda a bummer. WebpackManifestPlugin only exposes sync hooks
-        // but we want to do some async work to build our zip archive. This means
-        // we either need to dupe WebpackManifestPlugin to generate our own manifest
-        // or hack around the hooks it provides in order to create our archive.
-
-        // -AND- because WebpackManifestPlugin registers for stage Infinity, we can't
-        // register to a later processAssets stage to do something after it finishes.
         beforeEmit.tap(pluginName, (manifest: Manifest) => {
-          // Read in our template file
-          const pluginFileContent = readFile(
-            compiler.inputFileSystem,
-            this.options.pluginTemplate!
+          // This is the "main" file of the Wordpress plugin. We do all of the
+          // work of applying our header, manifest, and loaders to the specified
+          // template here.
+          const pluginFile = generatePluginFile(
+            wpPluginName,
+            manifest,
+            this.options,
+            compiler
           );
-
-          const utilsPath = resolve(
-            './src/load-assets.php'
-          );
-
-          const loadAssetsUtils = readFile(
-            compiler.inputFileSystem,
-            utilsPath
-          );
-
-          const templatedFile = pluginFileContent
-            .replace(
-              '{{plugin_header}}',
-              createPluginHeader({
-                ...this.options.headerFields,
-                pluginName: wpPluginName,
-              })
-            )
-            .replace(
-              '{{asset_manifest}}',
-              createAssetManifest(manifest)
-            )
-            .replace(
-              '{{shortcode_definitions}}',
-              createShortcodeDefinitions(
-                manifest,
-                this.options.entryToRootId
-              )
-            )
-            .replace(
-              '{{shortcode_registration}}',
-              createShortcodeRegistration(
-                this.options.shortcodePrefix!,
-                wpPluginName,
-                manifest
-              )
-            )
-            .replace(
-              '{{loading_script_utils}}',
-              indentText(loadAssetsUtils, 1)
-            )
-            .replace(
-              '{{add_action}}',
-              createAddAction(wpPluginName)
-            );
 
           compilation.emitAsset(
             outputFileName,
-            new RawSource(templatedFile)
+            new RawSource(pluginFile)
           );
+
+          const manifestFiles = Object.values(
+            manifest.entries
+          ).reduce((all, val) => [...all, ...val]);
 
           // We're also gonna fork all entry content into our plugin folder
           // We don't know what other apps are being deployed out of this build
           // folder so we opt to copy them.
           for (const chunk of compilation.chunks) {
             for (const file of chunk.files) {
+              // Make sure we don't add anything that's not in our manifest.
+              if (!manifestFiles.includes(file)) continue;
+
               const dupedFileName = join(
                 wpPluginName,
                 'assets',
@@ -186,15 +127,17 @@ export class WordpressShortcodeWebpackPlugin {
               );
             }
           }
-
-          // OK we've got an asset directory that looks how we want it. Lets
-          // zip it up for easy install.
         });
 
-        afterEmit.tap(pluginName, (manifest: Manifest) => {
-          compilation.deleteAsset(manifest.id!);
-        });
-
+        // We do this because we don't have a way to asynchronously process the output
+        // generated during the `beforeEmit` hook provided by WebpackManifestPlugin.
+        // So, we use the `additionalAssets` flag, which runs a second time
+        // whenever any `processAssets` hook adds more files to the compilation.
+        // This is a bit of a hack, and will be fixed by https://github.com/shellscape/webpack-manifest-plugin/pulls
+        // See https://github.com/shellscape/webpack-manifest-plugin/issues/262 for more context.
+        // We need to do asynchronous work because we want to create an archive
+        // of the Wordpress plugin and all the good Zip libraries are either
+        // promise or stream-based.
         compilation.hooks.processAssets.tapPromise(
           {
             stage:
@@ -204,58 +147,98 @@ export class WordpressShortcodeWebpackPlugin {
             additionalAssets: true,
           },
           async (assets) => {
-            // This is a hack to work around  WebpackManifestPlugin's late
-            // processAssets binding. Because we add all our assets in the same
-            // hook, we get a list of them here.
+            // We use this to test that this particular invocation of `processAssets` is
+            // the one triggered by out `beforeEmit` hook.
             if (!assets[outputFileName]) return;
 
-            const archive = new yazl.ZipFile();
+            const zipFile = await createZipFile(
+              assets,
+              wpPluginName
+            );
 
-            for (const [assetPath, asset] of Object.entries(
-              assets
-            )) {
-              // Make sure no other assets got caught up in this run
-              if (!assetPath.startsWith(wpPluginName))
-                continue;
-
-              // OK we're dealing with something we want to zip
-              archive.addBuffer(
-                asset.buffer(),
-                // TODO: Clean this up
-                assetPath.replace(`${wpPluginName}/`, '')
-              );
-            }
-
-            archive.end();
-
-            return new Promise((resolve, reject) => {
-              const bufs: Buffer[] = [];
-              archive.outputStream.on('data', (buf) =>
-                bufs.push(buf)
-              );
-
-              archive.outputStream.on('error', (error) =>
-                reject(error)
-              );
-
-              archive.outputStream.on('end', () => {
-                const outFile = Buffer.concat(bufs);
-
-                // TODO: Get from config
-                const outFileName =
-                  this.options.wordpressPluginName + '.zip';
-
-                compilation.emitAsset(
-                  outFileName,
-                  new RawSource(outFile)
-                );
-
-                resolve();
-              });
-            });
+            const zipFileName = `${wpPluginName}.zip`;
+            compilation.emitAsset(
+              zipFileName,
+              new RawSource(zipFile)
+            );
           }
         );
+
+        // Clean up our manifest after we're done with it
+        afterEmit.tap(pluginName, (manifest: Manifest) => {
+          compilation.deleteAsset(manifest.id!);
+        });
       }
     );
   }
+}
+
+// We're going to create a new instance of WebpackManifestPlugin that allows us to create
+// a manifest to our specifications. This is a simple way for us to figure out
+// the "real" list of files that are generated in our build.
+function createManifestPlugin(
+  manifestName: string,
+  wpPluginName: string,
+  compiler: Compiler
+) {
+  new WebpackManifestPlugin({
+    // We don't actually care about the file that gets written, we're going to make a unique name so we can delete it
+    fileName: manifestName,
+    basePath: `${wpPluginName}/assets`,
+    generate: (_, __, entries) => {
+      const entrypointFiles: {
+        [key: string]: Entry;
+      } = {};
+      Object.keys(entries).forEach((entrypoint) => {
+        entrypointFiles[entrypoint] = entries[
+          entrypoint
+        ].filter((fileName) => !fileName.endsWith('.map'));
+      });
+
+      return {
+        entries: entrypointFiles,
+        // Bit of a hack so we can clean this file up by ID later
+        id: manifestName,
+      };
+    },
+  }).apply(compiler);
+}
+
+async function createZipFile<T>(
+  // Type CompilationAssets, but Webpack doesn't export the type :(
+  assets: T,
+  wpPluginName: string
+): Promise<Buffer> {
+  const archive = new yazl.ZipFile();
+
+  for (const [assetPath, asset] of Object.entries(assets)) {
+    // Make sure no other assets got caught up in this run
+    if (!assetPath.startsWith(wpPluginName)) continue;
+
+    // OK we're dealing with something we want to zip
+    archive.addBuffer(
+      asset.buffer(),
+      // TODO: Clean this up
+      assetPath.replace(`${wpPluginName}/`, '')
+    );
+  }
+
+  archive.end();
+
+  return new Promise((resolve, reject) => {
+    const bufs: Buffer[] = [];
+    archive.outputStream.on('data', (buf) =>
+      bufs.push(buf)
+    );
+
+    archive.outputStream.on('error', (error) =>
+      reject(error)
+    );
+
+    archive.outputStream.on('end', () => {
+      const outFile = Buffer.concat(bufs);
+
+      resolve(outFile);
+    });
+  });
 }

@@ -1,14 +1,23 @@
 {
   "name": "wordpress-shortcode-webpack-plugin",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "build/src/index.js",
+  "keywords": [
+    "webpack",
+    "react",
+    "wordpress",
+    "webpack-plugin",
+    "wordpress-plugin"
+  ],
+  "description": "Create Wordpress plugins from React apps built using Webpack",
   "repository": "git@github.com:lagier-and-lagier/wordpress-shortcode-webpack-plugin.git",
   "author": "Tom Lagier <tom@gliffy.com>",
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
+    "copy-php-files": "mkdir -p build/src && cp src/*.php build/src",
+    "build": "yarn copy-php-files && tsc",
     "clean": "rm -rf ./build/*",
-    "test": "ava",
+    "test": "ava test/index.ts",
     "test-watch": "ava --verbose test/index.ts --watch"
   },
   "devDependencies": {
@@ -50,5 +59,9 @@
     "ignoredByWatcher": [
       "build/test/output/**/*"
     ]
-  }
+  },
+  "files": [
+    "src",
+    "build/src"
+  ]
 }
