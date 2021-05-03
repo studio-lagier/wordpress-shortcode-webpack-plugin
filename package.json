@@ -42,6 +42,7 @@
   "dependencies": {
     "uuid": "^8.3.2",
     "webpack-manifest-plugin": "^3.1.1",
+    "webpack-sources": "^2.2.0",
     "yazl": "^2.5.1"
   },
   "peerDependencies": {
