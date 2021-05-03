@@ -1,6 +1,6 @@
 {
   "name": "wordpress-shortcode-webpack-plugin",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "main": "dist/src/index.js",
   "keywords": [
     "webpack",
