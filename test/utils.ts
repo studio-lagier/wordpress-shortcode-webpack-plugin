@@ -64,27 +64,6 @@ export const readJson = (path: string) => {
   return JSON.parse(content);
 };
 
-export const watch = (
-  config: Partial<Configuration>,
-  t: ExecutionContext,
-  cb: Function
-) => {
-  const compiler = webpack(prepare(config));
-
-  return compiler.watch(
-    {
-      aggregateTimeout: 300,
-      poll: true,
-    },
-    (err, stats) => {
-      t.falsy(err);
-      t.is(stats?.hasErrors(), false);
-
-      cb(stats);
-    }
-  );
-};
-
 export const writeFile = (
   fileName: string,
   content: string

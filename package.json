@@ -1,7 +1,7 @@
 {
   "name": "wordpress-shortcode-webpack-plugin",
-  "version": "0.0.1",
-  "main": "build/src/index.js",
+  "version": "0.0.3",
+  "main": "dist/src/index.js",
   "keywords": [
     "webpack",
     "react",
@@ -14,11 +14,12 @@
   "author": "Tom Lagier <tom@gliffy.com>",
   "license": "MIT",
   "scripts": {
-    "copy-php-files": "mkdir -p build/src && cp src/*.php build/src",
+    "copy-php-files": "mkdir -p dist/src && cp src/*.php dist/src",
     "build": "yarn copy-php-files && tsc",
-    "clean": "rm -rf ./build/*",
-    "test": "ava test/index.ts",
-    "test-watch": "ava --verbose test/index.ts --watch"
+    "clean": "rm -rf ./dist/*",
+    "test": "yarn build && ava test/index.ts",
+    "test-watch": "yarn build && ava --verbose test/index.ts --watch",
+    "publish": "yarn build"
   },
   "devDependencies": {
     "@ava/typescript": "^2.0.0",
@@ -52,17 +53,18 @@
   "ava": {
     "typescript": {
       "rewritePaths": {
-        "src/": "build/src/",
-        "test/": "build/test/"
+        "src/": "dist/src/",
+        "test/": "dist/test/"
       },
       "compile": "tsc"
     },
     "ignoredByWatcher": [
-      "build/test/output/**/*"
+      "dist/test/output/**/*"
     ]
   },
   "files": [
     "src",
-    "build/src"
-  ]
+    "dist/src"
+  ],
+  "types": "dist/src/index.d.ts"
 }

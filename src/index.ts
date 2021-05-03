@@ -1,4 +1,4 @@
-import { Compilation, Compiler } from 'webpack';
+import webpack, { Compilation, Compiler } from 'webpack';
 import {
   WebpackManifestPlugin,
   getCompilerHooks,
@@ -11,10 +11,7 @@ import {
   generatePluginFile,
 } from './template';
 import yazl from 'yazl';
-import {
-  RawSource,
-  RawSource as RawSourceV4,
-} from 'webpack-sources';
+import { RawSource as RawSourceV4 } from 'webpack-sources';
 
 export interface PluginOptions {
   // What to name the plugin.
@@ -76,7 +73,11 @@ export class WordpressShortcodeWebpackPlugin {
     );
 
     // Webpack 4
-    if (!webpack.version) {
+    if (
+      !webpack ||
+      !webpack.version ||
+      webpack.version.startsWith('4')
+    ) {
       compiler.hooks.emit.tap(pluginName, (compilation) =>
         compilationHooks(
           compilation,
@@ -116,7 +117,8 @@ function compilationHooks(
   const { webpack } = compiler;
   const RawSource = webpack.sources
     ? webpack.sources.RawSource
-    : RawSourceV4;
+    : // Oh Typescript
+      ((RawSourceV4 as unknown) as typeof webpack.sources.RawSource);
 
   // Naming convention required by Wordpress
   const outputFileName = join(

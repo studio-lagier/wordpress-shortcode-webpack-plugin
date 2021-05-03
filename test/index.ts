@@ -69,7 +69,6 @@ test('Directory structure is correct', async (t) => {
     nodir: true,
   });
 
-  console.log(outputFiles);
   t.is(outputFiles.length, 2);
 
   for (const file of outputFiles) {
