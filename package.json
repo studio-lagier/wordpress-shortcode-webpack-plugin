@@ -1,6 +1,6 @@
 {
   "name": "wordpress-shortcode-webpack-plugin",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "main": "dist/src/index.js",
   "keywords": [
     "webpack",
@@ -19,7 +19,7 @@
     "clean": "rm -rf ./dist/*",
     "test": "yarn build && ava test/index.ts",
     "test-watch": "yarn build && ava --verbose test/index.ts --watch",
-    "publish": "yarn build"
+    "prepublish": "yarn build"
   },
   "devDependencies": {
     "@ava/typescript": "^2.0.0",
