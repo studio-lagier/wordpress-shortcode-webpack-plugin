@@ -1,6 +1,6 @@
 {
   "name": "wordpress-shortcode-webpack-plugin",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "main": "dist/src/index.js",
   "keywords": [
     "webpack",
@@ -48,7 +48,7 @@
   },
   "peerDependencies": {
     "react": "^16.0.0",
-    "webpack": "^4.0.0"
+    "webpack": "^5.0.0"
   },
   "ava": {
     "typescript": {
