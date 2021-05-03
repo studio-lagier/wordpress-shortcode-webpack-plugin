@@ -47,7 +47,7 @@
     "yazl": "^2.5.1"
   },
   "peerDependencies": {
-    "react": "^16.0.0",
+    "react": ">=16.0.0",
     "webpack": "^5.0.0"
   },
   "ava": {

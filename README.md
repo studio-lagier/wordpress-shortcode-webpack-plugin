@@ -4,6 +4,8 @@ This Webpack plugin is for Wordpress developers who want an easy way to drop Rea
 into Wordpress pages. It creates a simple Wordpress plugin from your Webpack configuration,
 registering each Webpack entry as a Wordpress shortcode.
 
+**Requires Webpack 5 (for now...)**
+
 ## Installation
 
 ```bash
