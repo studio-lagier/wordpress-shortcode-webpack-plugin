@@ -24,9 +24,10 @@ const applyDefaults = (
   return merge(defaults, webpackOpts);
 };
 
-export const hashLiteral = webpack.version.startsWith('4')
-  ? '[hash]'
-  : '[fullhash]';
+export const hashLiteral =
+  !webpack.version || webpack.version.startsWith('4')
+    ? '[hash]'
+    : '[fullhash]';
 
 export const prepare = (
   webpackOpts: Partial<Configuration>

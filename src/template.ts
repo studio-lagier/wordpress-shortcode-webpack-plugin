@@ -7,13 +7,14 @@ import {
 } from './utils';
 import { resolve } from 'path';
 import { Manifest, PluginOptions } from './index';
-import { Compilation, Compiler } from 'webpack';
+import { Compiler as Compiler4 } from 'webpack4';
+import { Compiler as Compiler5 } from 'webpack5';
 
 export function generatePluginFile(
   wpPluginName: string,
   manifest: Manifest,
   options: PluginOptions,
-  compiler: Compiler
+  compiler: Compiler4 | Compiler5
 ) {
   // Read in our template file
   const pluginFileContent = readFile(

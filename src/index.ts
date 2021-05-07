@@ -1,4 +1,12 @@
-import { Compilation, Compiler } from 'webpack';
+import {
+  compilation,
+  Compiler as Webpack4Compiler,
+} from 'webpack4';
+import {
+  Compiler as Webpack5Compiler,
+  Compilation,
+} from 'webpack5';
+
 import {
   WebpackManifestPlugin,
   getCompilerHooks,
@@ -11,6 +19,7 @@ import {
   generatePluginFile,
 } from './template';
 import yazl from 'yazl';
+import { RawSource as Webpack4RawSource } from 'webpack-sources';
 
 export interface PluginOptions {
   // What to name the plugin.
@@ -58,9 +67,8 @@ export class WordpressShortcodeWebpackPlugin {
     this.options = Object.assign({}, defaults, options);
   }
 
-  apply(compiler: Compiler) {
+  apply(compiler: Webpack4Compiler | Webpack5Compiler) {
     const pluginName = WordpressShortcodeWebpackPlugin.name;
-    const { webpack } = compiler;
     const wpPluginName = this.options.wordpressPluginName;
     const dummyManifestFilename = v4();
 
@@ -68,41 +76,62 @@ export class WordpressShortcodeWebpackPlugin {
     createManifestPlugin(
       dummyManifestFilename,
       wpPluginName,
-      compiler
+      compiler as Webpack5Compiler
     );
 
-    compiler.hooks.thisCompilation.tap(
-      pluginName,
-      (compilation) =>
-        compilationHooks(
-          compilation,
-          compiler,
-          pluginName,
-          wpPluginName,
-          this.options
-        )
-    );
+    let isWp5 = 'webpack' in compiler ? true : false;
+
+    if (!isWp5) {
+      const webpack4Compiler = compiler as Webpack4Compiler;
+      webpack4Compiler.hooks.emit.tap(
+        pluginName,
+        (compilation) =>
+          webpack4CompilationHook(
+            compilation,
+            webpack4Compiler,
+            pluginName,
+            wpPluginName,
+            outputFileName,
+            this.options
+          )
+      );
+    } else {
+      const webpack5Compiler = compiler as Webpack5Compiler;
+      webpack5Compiler.hooks.thisCompilation.tap(
+        pluginName,
+        (compilation) =>
+          webpack5CompilationHook(
+            compilation,
+            webpack5Compiler,
+            pluginName,
+            wpPluginName,
+            outputFileName,
+            this.options
+          )
+      );
+    }
   }
 }
 
-function compilationHooks(
+// Compilation hook for Webpack 5. There are subtle differences between the
+// interface that Webpack exposes for plugins between 4 and 5. The hook
+// names are different, the way you add and remove assets is different, and
+// the types of the compiler and compilation are different. To paper over the
+// difference, we maintain slightly different versions of the hook for WP4 and 5.
+function webpack5CompilationHook(
   compilation: Compilation,
-  compiler: Compiler,
+  compiler: Webpack5Compiler,
   pluginName: string,
   wpPluginName: string,
+  outputFileName: string,
   options: PluginOptions
 ) {
   const { beforeEmit, afterEmit } = getCompilerHooks(
+    // @ts-ignore
     compiler
   );
-  const { webpack } = compiler;
-  const { RawSource } = webpack.sources;
 
-  // Naming convention required by Wordpress
-  const outputFileName = join(
-    wpPluginName,
-    `${wpPluginName}.php`
-  );
+  const RawSource = compiler.webpack.sources.RawSource;
 
   beforeEmit.tap(pluginName, (manifest: Manifest) => {
     // This is the "main" file of the Wordpress plugin. We do all of the
@@ -112,6 +141,7 @@ function compilationHooks(
       wpPluginName,
       manifest,
       options,
+      // @ts-ignore
       compiler
     );
 
@@ -157,8 +187,7 @@ function compilationHooks(
   // promise or stream-based.
   compilation.hooks.processAssets.tapPromise(
     {
-      stage:
-        webpack.Compilation.PROCESS_ASSETS_STAGE_REPORT,
+      stage: Compilation.PROCESS_ASSETS_STAGE_REPORT,
       name: pluginName,
       additionalAssets: true,
     },
@@ -186,13 +215,109 @@ function compilationHooks(
   });
 }
 
+// Compilation hook for Webpack 4. Deprecated.
+function webpack4CompilationHook(
+  compilation: compilation.Compilation,
+  compiler: Webpack4Compiler,
+  pluginName: string,
+  wpPluginName: string,
+  outputFileName: string,
+  options: PluginOptions
+) {
+  const { beforeEmit, afterEmit } = getCompilerHooks(
+    // @ts-ignore
+    compiler
+  );
+
+  const RawSource = Webpack4RawSource;
+
+  beforeEmit.tap(pluginName, (manifest: Manifest) => {
+    // This is the "main" file of the Wordpress plugin. We do all of the
+    // work of applying our header, manifest, and loaders to the specified
+    // template here.
+    const pluginFile = generatePluginFile(
+      wpPluginName,
+      manifest,
+      options,
+      // @ts-ignore
+      compiler
+    );
+
+    compilation.assets[outputFileName] = {
+      source: () => new RawSource(pluginFile),
+    };
+
+    const manifestFiles = Object.values(
+      manifest.entries
+    ).reduce((all, val) => [...all, ...val]);
+
+    // We're also gonna fork all entry content into our plugin folder
+    // We don't know what other apps are being deployed out of this build
+    // folder so we opt to copy them.
+    for (const chunk of compilation.chunks) {
+      for (const file of chunk.files) {
+        // Make sure we don't add anything that's not in our manifest.
+        if (!manifestFiles.includes(file)) continue;
+
+        const dupedFileName = join(
+          wpPluginName,
+          'assets',
+          file
+        );
+
+        compilation.assets[dupedFileName] = {
+          source: () =>
+            new RawSource(
+              compilation.assets[file].source()
+            ),
+        };
+      }
+    }
+  });
+
+  // We do this because we don't have a way to asynchronously process the output
+  // generated during the `beforeEmit` hook provided by WebpackManifestPlugin.
+  // So, we use the `additionalAssets` flag, which runs a second time
+  // whenever any `processAssets` hook adds more files to the compilation.
+  // This is a bit of a hack, and will be fixed by https://github.com/shellscape/webpack-manifest-plugin/pulls
+  // See https://github.com/shellscape/webpack-manifest-plugin/issues/262 for more context.
+  // We need to do asynchronous work because we want to create an archive
+  // of the Wordpress plugin and all the good Zip libraries are either
+  // promise or stream-based.
+  compiler.hooks.afterEmit.tapPromise(
+    {
+      name: pluginName,
+    },
+    async (compilation) => {
+      // We use this to test that this particular invocation of `processAssets` is
+      // the one triggered by out `beforeEmit` hook.
+      if (!compilation.assets[outputFileName]) return;
+
+      const zipFile = await createZipFile(
+        compilation.assets,
+        wpPluginName
+      );
+
+      const zipFileName = `${wpPluginName}.zip`;
+      compilation.assets[zipFileName] = {
+        source: () => new RawSource(zipFile.toString()),
+      };
+    }
+  );
+
+  // Clean up our manifest after we're done with it
+  afterEmit.tap(pluginName, (manifest: Manifest) => {
+    delete compilation.assets[manifest.id];
+  });
+}
+
 // We're going to create a new instance of WebpackManifestPlugin that allows us to create
 // a manifest to our specifications. This is a simple way for us to figure out
 // the "real" list of files that are generated in our build.
 function createManifestPlugin(
   manifestName: string,
   wpPluginName: string,
-  compiler: Compiler
+  compiler: Webpack5Compiler
 ) {
   new WebpackManifestPlugin({
     // We don't actually care about the file that gets written, we're going to make a unique name so we can delete it
@@ -214,6 +339,7 @@ function createManifestPlugin(
         id: manifestName,
       };
     },
+    // @ts-ignore
   }).apply(compiler);
 }
 
