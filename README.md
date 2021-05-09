@@ -212,13 +212,13 @@ Go to the project directory
 Install dependencies
 
 ```bash
-  npm install
+  yarn
 ```
 
 Build
 
 ```bash
-  npm run build
+  yarn build
 ```
 
 ## Running Tests
@@ -226,7 +226,7 @@ Build
 To run tests, run the following command
 
 ```bash
-  npm run test
+  yarn test
 ```
 
 ## License
