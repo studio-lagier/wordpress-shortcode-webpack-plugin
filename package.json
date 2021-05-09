@@ -1,6 +1,6 @@
 {
   "name": "wordpress-shortcode-webpack-plugin",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "main": "dist/src/index.js",
   "keywords": [
     "webpack",
@@ -46,10 +46,10 @@
   },
   "dependencies": {
     "uuid": "^8.3.2",
-    "webpack4": "npm:webpack@^4",
-    "webpack5": "npm:webpack@^5",
     "webpack-manifest-plugin": "^3.1.1",
     "webpack-sources": "^2.2.0",
+    "webpack4": "npm:webpack@^4",
+    "webpack5": "npm:webpack@^5",
     "yazl": "^2.5.1"
   },
   "peerDependencies": {
