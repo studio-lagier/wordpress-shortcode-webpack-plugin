@@ -10,7 +10,7 @@
     "wordpress-plugin"
   ],
   "description": "Create Wordpress plugins from React apps built using Webpack",
-  "repository": "git@github.com:lagier-and-lagier/wordpress-shortcode-webpack-plugin.git",
+  "repository": "git@github.com:studio-lagier/wordpress-shortcode-webpack-plugin.git",
   "author": "Tom Lagier <tom@gliffy.com>",
   "license": "MIT",
   "scripts": {

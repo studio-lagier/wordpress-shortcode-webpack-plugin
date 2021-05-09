@@ -84,7 +84,7 @@ export class WordpressShortcodeWebpackPlugin {
       compiler as Webpack5Compiler
     );
 
-    let isWp5 = 'webpack' in compiler ? true : false;
+    let isWp5 = 'webpack' in compiler;
 
     if (!isWp5) {
       const webpack4Compiler = compiler as Webpack4Compiler;
