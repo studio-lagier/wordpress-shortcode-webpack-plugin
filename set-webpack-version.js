@@ -21,7 +21,6 @@ if (!version) {
 
 const packageData = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json')))
 packageData.peerDependencies.webpack = version
-
 packageData.devDependencies.webpack = version
 
 fs.writeFileSync(path.join(__dirname, 'package.json'), JSON.stringify(packageData, null, 2))

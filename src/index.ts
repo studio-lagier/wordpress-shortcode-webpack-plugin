@@ -19,7 +19,6 @@ import {
   generatePluginFile,
 } from './template';
 import yazl from 'yazl';
-import { RawSource as Webpack4RawSource } from 'webpack-sources';
 
 export interface PluginOptions {
   // What to name the plugin.
@@ -191,9 +190,14 @@ function webpack5CompilationHook(
   // We need to do asynchronous work because we want to create an archive
   // of the Wordpress plugin and all the good Zip libraries are either
   // promise or stream-based.
+
+  // We use the raw number here so we don't take a direct dependency
+  // on Webpack in our output. Good for bundle size, good for us.
+  // From Compilation.PROCESS_ASSETS_STAGE_REPORT
+  const PROCESS_ASSETS_STAGE_REPORT = 5000;
   compilation.hooks.processAssets.tapPromise(
     {
-      stage: Compilation.PROCESS_ASSETS_STAGE_REPORT,
+      stage: PROCESS_ASSETS_STAGE_REPORT,
       name: pluginName,
       additionalAssets: true,
     },
@@ -300,10 +304,10 @@ function webpack4CompilationHook(
       );
 
       const zipFileName = `${wpPluginName}.zip`;
-      // compilation.assets[zipFileName] = {
-      //   source: () => zipFile,
-      //   size: () => zipFile.length,
-      // };
+      compilation.assets[zipFileName] = {
+        source: () => zipFile,
+        size: () => zipFile.length,
+      };
     }
   );
 
