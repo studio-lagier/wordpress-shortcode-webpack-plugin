@@ -54,7 +54,7 @@
   },
   "peerDependencies": {
     "react": ">=16.0.0",
-    "webpack": "^5"
+    "webpack": "^4"
   },
   "ava": {
     "typescript": {
