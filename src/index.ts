@@ -72,6 +72,12 @@ export class WordpressShortcodeWebpackPlugin {
     const wpPluginName = this.options.wordpressPluginName;
     const dummyManifestFilename = v4();
 
+    // Naming convention required by Wordpress
+    const outputFileName = join(
+      wpPluginName,
+      `${wpPluginName}.php`
+    );
+
     // Create a custom manifest using WebpackManifestPlugin.
     createManifestPlugin(
       dummyManifestFilename,
@@ -229,8 +235,6 @@ function webpack4CompilationHook(
     compiler
   );
 
-  const RawSource = Webpack4RawSource;
-
   beforeEmit.tap(pluginName, (manifest: Manifest) => {
     // This is the "main" file of the Wordpress plugin. We do all of the
     // work of applying our header, manifest, and loaders to the specified
@@ -244,7 +248,8 @@ function webpack4CompilationHook(
     );
 
     compilation.assets[outputFileName] = {
-      source: () => new RawSource(pluginFile),
+      source: () => pluginFile,
+      size: () => pluginFile.length,
     };
 
     const manifestFiles = Object.values(
@@ -265,12 +270,8 @@ function webpack4CompilationHook(
           file
         );
 
-        compilation.assets[dupedFileName] = {
-          source: () =>
-            new RawSource(
-              compilation.assets[file].source()
-            ),
-        };
+        compilation.assets[dupedFileName] =
+          compilation.assets[file];
       }
     }
   });
@@ -299,9 +300,10 @@ function webpack4CompilationHook(
       );
 
       const zipFileName = `${wpPluginName}.zip`;
-      compilation.assets[zipFileName] = {
-        source: () => new RawSource(zipFile.toString()),
-      };
+      // compilation.assets[zipFileName] = {
+      //   source: () => zipFile,
+      //   size: () => zipFile.length,
+      // };
     }
   );
 
@@ -354,9 +356,15 @@ async function createZipFile<T>(
     // Make sure no other assets got caught up in this run
     if (!assetPath.startsWith(wpPluginName)) continue;
 
+    // .buffer is WP5, .source is WP4
+    const assetBuffer =
+      'buffer' in asset
+        ? asset.buffer()
+        : Buffer.from(asset.source());
+
     // OK we're dealing with something we want to zip
     archive.addBuffer(
-      asset.buffer(),
+      assetBuffer,
       // TODO: Clean this up
       assetPath.replace(`${wpPluginName}/`, '')
     );

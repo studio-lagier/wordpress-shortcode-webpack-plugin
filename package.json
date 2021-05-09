@@ -15,13 +15,13 @@
   "license": "MIT",
   "scripts": {
     "copy-php-files": "mkdir -p dist/src && cp src/*.php dist/src",
-    "build": "yarn copy-php-files && tsc",
+    "build": "yarn clean && yarn copy-php-files && tsc",
     "clean": "rm -rf ./dist/*",
     "test": "yarn test:v4 && yarn test:v5",
     "test:v4": "node set-webpack-version.js \"^4\" && yarn && yarn build && ava",
     "test:v5": "node set-webpack-version.js \"^5\" && yarn && yarn build && ava",
     "test-watch": "yarn build && ava --verbose test/index.ts --watch",
-    "prepublish": "yarn build"
+    "prepack": "yarn build"
   },
   "devDependencies": {
     "@ava/typescript": "^2.0.0",

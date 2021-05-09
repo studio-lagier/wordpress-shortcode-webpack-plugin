@@ -7,7 +7,10 @@ export function readFile(
   _fs: any, // InputFileSystem from Webpack, not exported :(
   path: string
 ): string {
-  return _fs.readFileSync!(path, 'utf8');
+  // For some reason this is returning a buffer even with the encoding
+  // specified.
+  const file = _fs.readFileSync!(path, 'utf8');
+  return typeof file === 'string' ? file : file.toString();
 }
 
 export function kebabToTitle(str: string) {

@@ -4,7 +4,7 @@ This Webpack plugin is for Wordpress developers who want an easy way to drop Rea
 into Wordpress pages. It creates a simple Wordpress plugin from your Webpack configuration,
 registering each Webpack entry as a Wordpress shortcode.
 
-**Requires Webpack 5 (for now...)**
+**Requires Webpack 4 or 5**
 
 ## Installation
 
@@ -69,15 +69,14 @@ So, in Wordpress, we could use the shortcode like `[my-awesome-plugin-main]`.
 
 ### `wordpressPluginName` (required)
 
-**Type:** `string`
+Type: `string`
 
 Your plugin's name in kebab-case.
 
 ### `shortcodePrefix`
 
-**Type:** `string`
-
-**Default:** `wordpressPluginName`
+Type: `string`<br/>
+Default: `wordpressPluginName`
 
 The prefix used instead of `wordpressPluginName` to create your shortcodes.
 With `shortcodePrefix: 'my-shortcode'`, the `main` entry shortcode would
@@ -85,7 +84,7 @@ be `[my-shortcode-main]`.
 
 ### `headerFields`
 
-**Type:**
+Type:
 
 ```
 {
@@ -104,16 +103,15 @@ be `[my-shortcode-main]`.
 }
 ```
 
-**Default:** `{}`
+Default: `{}`
 
 Header fields for the Wordpress plugin.
 See https://developer.wordpress.org/plugins/plugin-basics/header-requirements/#header-fields
 
-### entryToRootId
+### `entryToRootId`
 
-**Type:** `object`
-
-**Default:** `{}`
+Type: `object` <br/>
+Default: `{}`
 
 A map of overrides for the root element ID for each entrypoint. By default we just use `root` as
 the ID for the root element, per React convention. If that ID conflicts with something else on the page,
@@ -127,9 +125,8 @@ you can adjust it with this map.
 
 ### `pluginTemplate`
 
-**Type:** `string`
-
-**Default:** `./src/default-template.php` (in the wordpress-shortcode-webpack-plugin repo)
+Type: `string` <br/>
+Default: `./src/default-template.php` (in the wordpress-shortcode-webpack-plugin repo)
 
 Path to the template file that should be used to generate the Wordpress plugin file.
 
