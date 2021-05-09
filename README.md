@@ -1,4 +1,4 @@
-# WordpressShortcodeWebpackPlugin
+# wordpress-shortcode-webpack-plugin
 
 This Webpack plugin is for Wordpress developers who want an easy way to drop React apps
 into Wordpress pages. It creates a simple Wordpress plugin from your Webpack configuration,
