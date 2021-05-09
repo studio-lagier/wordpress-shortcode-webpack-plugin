@@ -289,7 +289,7 @@ function webpack4CompilationHook(
   // We need to do asynchronous work because we want to create an archive
   // of the Wordpress plugin and all the good Zip libraries are either
   // promise or stream-based.
-  compiler.hooks.afterEmit.tapPromise(
+  compiler.hooks.emit.tapPromise(
     {
       name: pluginName,
     },
