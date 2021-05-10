@@ -100,6 +100,21 @@ export class WordpressShortcodeWebpackPlugin {
             this.options
           )
       );
+
+      // This is a little janky but we've got to do it based on an
+      // interaction between Webpack 4 and WebpackManifestPlugin
+      webpack4Compiler.hooks.emit.tapPromise(
+        {
+          name: pluginName,
+          stage: Infinity,
+        },
+        (compilation) =>
+          webpack4ZipFile(
+            compilation,
+            outputFileName,
+            wpPluginName
+          )
+      );
     } else {
       const webpack5Compiler = compiler as Webpack5Compiler;
       webpack5Compiler.hooks.thisCompilation.tap(
@@ -240,6 +255,7 @@ function webpack4CompilationHook(
   );
 
   beforeEmit.tap(pluginName, (manifest: Manifest) => {
+    console.log('beforeEmit');
     // This is the "main" file of the Wordpress plugin. We do all of the
     // work of applying our header, manifest, and loaders to the specified
     // template here.
@@ -280,6 +296,18 @@ function webpack4CompilationHook(
     }
   });
 
+  // Clean up our manifest after we're done with it
+  afterEmit.tap(pluginName, (manifest: Manifest) => {
+    delete compilation.assets[manifest.id];
+    console.log('afterEmit');
+  });
+}
+
+async function webpack4ZipFile(
+  compilation: compilation.Compilation,
+  outputFileName: string,
+  wpPluginName: string
+) {
   // We do this because we don't have a way to asynchronously process the output
   // generated during the `beforeEmit` hook provided by WebpackManifestPlugin.
   // So, we use the `additionalAssets` flag, which runs a second time
@@ -289,32 +317,19 @@ function webpack4CompilationHook(
   // We need to do asynchronous work because we want to create an archive
   // of the Wordpress plugin and all the good Zip libraries are either
   // promise or stream-based.
-  compiler.hooks.emit.tapPromise(
-    {
-      name: pluginName,
-    },
-    async (compilation) => {
-      // We use this to test that this particular invocation of `processAssets` is
-      // the one triggered by out `beforeEmit` hook.
-      if (!compilation.assets[outputFileName]) return;
 
-      const zipFile = await createZipFile(
-        compilation.assets,
-        wpPluginName
-      );
-
-      const zipFileName = `${wpPluginName}.zip`;
-      compilation.assets[zipFileName] = {
-        source: () => zipFile,
-        size: () => zipFile.length,
-      };
-    }
+  // We use this to test that this particular invocation of `processAssets` is
+  // the one triggered by out `beforeEmit` hook.
+  if (!compilation.assets[outputFileName]) return;
+  const zipFile = await createZipFile(
+    compilation.assets,
+    wpPluginName
   );
-
-  // Clean up our manifest after we're done with it
-  afterEmit.tap(pluginName, (manifest: Manifest) => {
-    delete compilation.assets[manifest.id];
-  });
+  const zipFileName = `${wpPluginName}.zip`;
+  compilation.assets[zipFileName] = {
+    source: () => zipFile,
+    size: () => zipFile.length,
+  };
 }
 
 // We're going to create a new instance of WebpackManifestPlugin that allows us to create
@@ -328,7 +343,6 @@ function createManifestPlugin(
   new WebpackManifestPlugin({
     // We don't actually care about the file that gets written, we're going to make a unique name so we can delete it
     fileName: manifestName,
-    basePath: `${wpPluginName}/assets`,
     generate: (_, __, entries) => {
       const entrypointFiles: {
         [key: string]: Entry;

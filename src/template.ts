@@ -22,13 +22,6 @@ export function generatePluginFile(
     options.pluginTemplate!
   );
 
-  const utilsPath = resolve(__dirname, 'load-assets.php');
-
-  const loadAssetsUtils = readFile(
-    compiler.inputFileSystem,
-    utilsPath
-  );
-
   const templatedFile = pluginFileContent
     .replace(
       '{{plugin_header}}',
@@ -58,7 +51,10 @@ export function generatePluginFile(
     )
     .replace(
       '{{loading_script_utils}}',
-      indentText(loadAssetsUtils, 1)
+      createLoaderUtils(
+        wpPluginName,
+        compiler.inputFileSystem
+      )
     )
     .replace(
       '{{add_action}}',
@@ -218,4 +214,18 @@ export function createShortcodeRegistration(
 ${indentText(addShortcodes.join('\n'), 2)}
 ${indentText(registerAssets.join('\n'), 2)}
   }`;
+}
+
+export function createLoaderUtils(
+  pluginName: string,
+  fs: any
+) {
+  const utilsPath = resolve(__dirname, 'load-assets.php');
+
+  const loadAssetsUtils = readFile(fs, utilsPath);
+
+  return loadAssetsUtils.replace(
+    '{{pluginName}}',
+    pluginName
+  );
 }
