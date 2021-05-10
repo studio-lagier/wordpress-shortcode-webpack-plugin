@@ -65,6 +65,8 @@ shortcode registered would be `my-awesome-plugin-main`.
 
 So, in Wordpress, we could use the shortcode like `[my-awesome-plugin-main]`.
 
+[You can see an example Create React App repo here.](https://github.com/studio-lagier/sample-wordpress-CRA-app)
+
 ## Options
 
 ### `wordpressPluginName` (required)
