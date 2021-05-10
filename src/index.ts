@@ -255,7 +255,6 @@ function webpack4CompilationHook(
   );
 
   beforeEmit.tap(pluginName, (manifest: Manifest) => {
-    console.log('beforeEmit');
     // This is the "main" file of the Wordpress plugin. We do all of the
     // work of applying our header, manifest, and loaders to the specified
     // template here.
@@ -299,7 +298,6 @@ function webpack4CompilationHook(
   // Clean up our manifest after we're done with it
   afterEmit.tap(pluginName, (manifest: Manifest) => {
     delete compilation.assets[manifest.id];
-    console.log('afterEmit');
   });
 }
 

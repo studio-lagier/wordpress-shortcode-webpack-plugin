@@ -36,13 +36,13 @@ function register_assets($entrypoint) {
   $js = get_js_for_entrypoint($entrypoint);
 
   foreach ($js as &$script) {
-    wp_register_script($script, plugins_url('{{pluginName}}/assets' . $script));
+    wp_register_script($script, plugins_url('{{pluginName}}/assets/' . $script));
   }
 
   $css = get_css_for_entrypoint($entrypoint);
 
   foreach ($css as &$style) {
-    wp_register_style($style, plugins_url('{{pluginName}}/assets' . $style));
+    wp_register_style($style, plugins_url('{{pluginName}}/assets/' . $style));
   }
 }
 

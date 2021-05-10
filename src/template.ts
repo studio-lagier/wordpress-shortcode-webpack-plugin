@@ -225,7 +225,7 @@ export function createLoaderUtils(
   const loadAssetsUtils = readFile(fs, utilsPath);
 
   return loadAssetsUtils.replace(
-    '{{pluginName}}',
+    /{{pluginName}}/g,
     pluginName
   );
 }
