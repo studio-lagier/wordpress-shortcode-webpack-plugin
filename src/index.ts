@@ -170,26 +170,23 @@ function webpack5CompilationHook(
       new RawSource(pluginFile)
     );
 
-    const manifestFiles = Object.values(
-      manifest.entries
-    ).reduce((all, val) => [...all, ...val]);
-
     // We're also gonna fork all entry content into our plugin folder
     // We don't know what other apps are being deployed out of this build
     // folder so we opt to copy them.
-    for (const chunk of compilation.chunks) {
-      for (const file of chunk.files) {
-        const dupedFileName = join(
-          wpPluginName,
-          'assets',
-          file
-        );
+    for (const file of Object.keys(compilation.assets)) {
+      // Skip any file in the plugin directory already
+      if (file.startsWith(wpPluginName)) continue;
 
-        compilation.emitAsset(
-          dupedFileName,
-          new RawSource(compilation.assets[file].source())
-        );
-      }
+      const dupedFileName = join(
+        wpPluginName,
+        'assets',
+        file
+      );
+
+      compilation.emitAsset(
+        dupedFileName,
+        new RawSource(compilation.assets[file].source())
+      );
     }
   });
 
@@ -268,24 +265,21 @@ function webpack4CompilationHook(
       size: () => pluginFile.length,
     };
 
-    const manifestFiles = Object.values(
-      manifest.entries
-    ).reduce((all, val) => [...all, ...val]);
-
     // We're also gonna fork all entry content into our plugin folder
     // We don't know what other apps are being deployed out of this build
     // folder so we opt to copy them.
-    for (const chunk of compilation.chunks) {
-      for (const file of chunk.files) {
-        const dupedFileName = join(
-          wpPluginName,
-          'assets',
-          file
-        );
+    for (const file in compilation.assets) {
+      // Skip any file in the plugin directory already
+      if (file.startsWith(wpPluginName)) continue;
 
-        compilation.assets[dupedFileName] =
-          compilation.assets[file];
-      }
+      const dupedFileName = join(
+        wpPluginName,
+        'assets',
+        file
+      );
+
+      compilation.assets[dupedFileName] =
+        compilation.assets[file];
     }
   });
 
