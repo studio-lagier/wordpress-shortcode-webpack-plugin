@@ -179,9 +179,6 @@ function webpack5CompilationHook(
     // folder so we opt to copy them.
     for (const chunk of compilation.chunks) {
       for (const file of chunk.files) {
-        // Make sure we don't add anything that's not in our manifest.
-        if (!manifestFiles.includes(file)) continue;
-
         const dupedFileName = join(
           wpPluginName,
           'assets',
@@ -280,9 +277,6 @@ function webpack4CompilationHook(
     // folder so we opt to copy them.
     for (const chunk of compilation.chunks) {
       for (const file of chunk.files) {
-        // Make sure we don't add anything that's not in our manifest.
-        if (!manifestFiles.includes(file)) continue;
-
         const dupedFileName = join(
           wpPluginName,
           'assets',
