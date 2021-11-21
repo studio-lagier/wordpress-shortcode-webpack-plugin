@@ -1,13 +1,14 @@
 /**
  * Loader utils
  */
-
-function str_ends_with( $haystack, $needle ) {
-  $length = strlen( $needle );
-  if( !$length ) {
-      return true;
+if (! function_exists('str_ends_with')) {
+  function str_ends_with( $haystack, $needle ) {
+    $length = strlen( $needle );
+    if( !$length ) {
+        return true;
+    }
+    return substr( $haystack, -$length ) === $needle;
   }
-  return substr( $haystack, -$length ) === $needle;
 }
 
 function is_js($path) {
